@@ -202,4 +202,3 @@ Contribuições são bem-vindas! Sinta-se à vontade para abrir um issue ou envi
 - [Sentence Transformers](https://github.com/UKPLab/sentence-transformers)
 - [ChromaDB](https://github.com/chroma-core/chroma)
 - [Ollama](https://github.com/ollama/ollama)
-- Todos os desenvolvedores que contribuíram com as bibliotecas usadas neste projeto
