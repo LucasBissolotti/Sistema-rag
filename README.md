@@ -2,8 +2,6 @@
 
 Um sistema completo de RAG (Retrieval-Augmented Generation) para busca inteligente em documentos locais usando embeddings e LLMs locais.
 
-![RAG System](src/web/static/logo.png)
-
 ## 📋 Visão Geral
 
 Este sistema permite indexar documentos locais (PDF, DOCX, TXT), gerar embeddings para busca semântica e utilizar modelos de linguagem (LLMs) para responder perguntas com base no conteúdo dos documentos. Tudo funcionando de forma local e privada.
