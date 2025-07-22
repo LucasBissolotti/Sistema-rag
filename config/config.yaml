@@ -1,0 +1,53 @@
+# Configuração do Sistema RAG
+sistema:
+  nome: "Sistema RAG - Busca Inteligente em Documentos"
+  versao: "1.0.0"
+  modo_debug: false
+
+documentos:
+  pasta: "./data/documentos"
+  formatos_suportados: 
+    - ".pdf"
+    - ".docx"
+    - ".txt"
+  ignorar_arquivos:
+    - ".DS_Store"
+    - "Thumbs.db"
+
+processamento:
+  tamanho_chunk: 500
+  sobreposicao_chunk: 100
+  linguagem_padrao: "pt-br"
+
+embeddings:
+  modelo: "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
+  dimensao: 768
+  cache_ativo: true
+  pasta_cache: "./data/cache"
+
+vector_db:
+  tipo: "chroma"
+  pasta: "./data/vectordb"
+  distancia_similaridade: 0.75
+
+llm:
+  modelo: "ollama"  # Outras opções: "llama.cpp", "gpt4all", etc.
+  modelo_nome: "llama3:latest"  # Nome do modelo a ser usado no Ollama
+  parametros:
+    temperatura: 0.7
+    top_p: 0.9
+    max_tokens: 1000
+  prompt_template: |
+    Baseado nos documentos a seguir, responda a pergunta com precisão.
+    Se a informação não estiver nos documentos, diga "Não encontrei essa informação nos documentos disponíveis."
+    
+    Contexto:
+    {context}
+    
+    Pergunta: {question}
+    
+    Resposta:
+
+logs:
+  arquivo: "./logs/sistema.log"
+  nivel: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL

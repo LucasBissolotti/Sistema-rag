@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema RAG - Busca Inteligente</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4361ee;
+            --primary-dark: #3a56d4;
+            --secondary: #7209b7;
+            --success: #06d6a0;
+            --info: #118ab2;
+            --warning: #ffd166;
+            --danger: #ef476f;
+            --dark: #1a1c2c;
+            --light: #f8f9fa;
+            --gray: #6c757d;
+            --gray-light: #e9ecef;
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --sidebar-bg: #1a1c2c;
+            --message-user: #e3f2fd;
+            --message-bot: #f0f4f8;
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+            --border-radius: 16px;
+        }
+
+        .dark-mode {
+            --primary: #5e72e4;
+            --primary-dark: #4e62d0;
+            --secondary: #9d4edd;
+            --dark: #121212;
+            --light: #1e1e1e;
+            --gray: #a0a0a0;
+            --gray-light: #2d2d2d;
+            --card-bg: rgba(30, 30, 30, 0.95);
+            --sidebar-bg: #121212;
+            --message-user: #2a3f5d;
+            --message-bot: #2d2d3a;
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+            transition: var(--transition);
+        }
+
+        .dark-mode body {
+            background: linear-gradient(135deg, #2c3e50 0%, #1a1a2e 100%);
+        }
+
+        .app-container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            grid-template-rows: auto 1fr;
+            gap: 25px;
+            max-width: 1600px;
+            margin: 0 auto;
+            height: calc(100vh - 40px);
+            overflow: hidden;
+        }
+
+        @media (max-width: 992px) {
+            .app-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Header */
+        .app-header {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            color: white;
+        }
+
+        .app-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .app-title h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #ffffff, #e0e0e0);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .app-title i {
+            font-size: 2rem;
+            color: var(--success);
+        }
+
+        .theme-switch {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 50px;
+            padding: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .theme-switch:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: var(--sidebar-bg);
+            border-radius: var(--border-radius);
+            padding: 25px;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            overflow-y: auto;
+            max-height: 100%;
+            height: 100%;
+        }
+        
+        .documents-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .section-title {
+            color: white;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title i {
+            color: var(--info);
+        }
+
+        /* Document List */
+        .document-list {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 10px;
+            scrollbar-width: thin;
+            max-height: 40vh;
+            min-height: 0;
+        }
+
+        .document-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .document-list::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+
+        .document-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            margin-bottom: 10px;
+            color: white;
+            transition: var(--transition);
+        }
+
+        .document-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .document-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+        }
+
+        .document-info i {
+            color: var(--warning);
+        }
+
+        .document-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .document-actions button {
+            background: transparent;
+            border: none;
+            color: var(--gray);
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: var(--transition);
+        }
+
+        .document-actions button:hover {
+            color: var(--danger);
+        }
+
+        /* Upload Section */
+        .upload-section {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            padding: 30px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-bottom: 15px;
+        }
+
+        .upload-area:hover,
+        .upload-area.drag-active {
+            border-color: var(--primary);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .upload-area i {
+            font-size: 2.5rem;
+            color: var(--info);
+            margin-bottom: 10px;
+        }
+
+        .upload-area p {
+            color: white;
+            font-size: 0.9rem;
+        }
+
+        .upload-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .upload-btn:hover {
+            background: var(--primary-dark);
+        }
+
+        /* Actions */
+        .actions-section {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .action-btn {
+            padding: 15px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .action-btn.secondary {
+            background: var(--secondary);
+        }
+
+        .action-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Main Content */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            overflow: hidden;
+            height: 100%;
+        }
+
+        /* Chat Container */
+        .chat-container {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .chat-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid var(--gray-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-header h2 {
+            font-size: 1.5rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .model-info {
+            background: rgba(67, 97, 238, 0.1);
+            color: var(--primary);
+            padding: 5px 15px;
+            border-radius: 50px;
+            font-size: 0.9rem;
+        }
+
+        .chat-history {
+            flex: 1;
+            padding: 25px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-height: 0;
+            max-height: calc(100vh - 300px);
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) var(--gray-light);
+        }
+        .chat-history::-webkit-scrollbar {
+            width: 8px;
+        }
+        .chat-history::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+
+        .message {
+            display: flex;
+            gap: 15px;
+            max-width: 85%;
+        }
+
+        .message.user {
+            align-self: flex-end;
+        }
+
+        .message.bot {
+            align-self: flex-start;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .message.user .avatar {
+            background: var(--secondary);
+        }
+
+        .message-content {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .message-text {
+            padding: 15px;
+            border-radius: 18px;
+            line-height: 1.5;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .message.user .message-text {
+            background: var(--message-user);
+            border-bottom-right-radius: 5px;
+        }
+
+        .message.bot .message-text {
+            background: var(--message-bot);
+            border-bottom-left-radius: 5px;
+        }
+
+        .message-info {
+            font-size: 0.8rem;
+            color: var(--gray);
+            display: flex;
+            gap: 10px;
+        }
+
+        .sources {
+            margin-top: 10px;
+            padding: 12px 15px;
+            background: rgba(67, 97, 238, 0.08);
+            border-radius: 12px;
+            font-size: 0.9rem;
+        }
+
+        .sources-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--primary);
+        }
+
+        .source-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 0;
+        }
+
+        .source-item i {
+            color: var(--success);
+        }
+
+        .chat-input {
+            padding: 20px;
+            border-top: 1px solid var(--gray-light);
+            display: flex;
+            gap: 15px;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 1px solid var(--gray-light);
+            border-radius: 12px;
+            font-size: 1rem;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .chat-input input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+        }
+
+        .send-btn {
+            padding: 15px 25px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .send-btn:hover {
+            background: var(--primary-dark);
+        }
+
+        /* Status Container */
+        .status-container {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 25px;
+        }
+
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .status-header h3 {
+            font-size: 1.3rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-content {
+            padding: 20px;
+            background: rgba(67, 97, 238, 0.05);
+            border-radius: 12px;
+            min-height: 100px;
+            max-height: 350px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) var(--gray-light);
+        }
+        .status-content::-webkit-scrollbar {
+            width: 8px;
+        }
+        .status-content::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+
+        .status-item {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .status-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(6, 214, 160, 0.15);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--success);
+        }
+
+        .status-text {
+            flex: 1;
+        }
+
+        .status-text h4 {
+            margin-bottom: 5px;
+            color: var(--dark);
+        }
+
+        .status-text p {
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: var(--gray-light);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress {
+            height: 100%;
+            background: var(--success);
+            width: 65%;
+            border-radius: 4px;
+        }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .app-container {
+                height: auto;
+            }
+            
+            .app-header {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .message {
+                max-width: 90%;
+            }
+            
+            .chat-input {
+                flex-direction: column;
+            }
+        }
+        .text-success {
+            color: var(--success) !important;
+        }
+        
+        .processing-info {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: var(--primary);
+            background-color: rgba(67, 97, 238, 0.05);
+            padding: 8px;
+            border-radius: 8px;
+            text-align: center;
+            animation: pulse 1.5s infinite;
+        }
+        
+        .processing-tips {
+            margin-top: 8px;
+            font-size: 0.85em;
+            color: var(--gray);
+            text-align: center;
+        }
+        
+        .retry-container {
+            margin-top: 15px;
+            text-align: center;
+        }
+        
+        .retry-container .action-btn {
+            padding: 8px 15px;
+            font-size: 0.9em;
+            background: var(--info);
+        }
+        
+        /* Botão desativado */
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 0.7; }
+            50% { opacity: 1; }
+            100% { opacity: 0.7; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="app-title">
+                <h1>Sistema RAG</h1>
+            </div>
+        </header>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="documents-section">
+                <h3 class="section-title"><i class="fas fa-folder-open"></i> Documentos Indexados</h3>
+                <div class="document-list" id="document-list">
+                    <!-- Lista dinâmica de documentos -->
+                </div>
+            </div>
+
+            <div class="upload-section">
+                <h3 class="section-title"><i class="fas fa-cloud-upload-alt"></i> Adicionar Documento</h3>
+                <div class="upload-area" id="drop-area">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Arraste e solte seu arquivo aqui<br>ou clique para selecionar</p>
+                </div>
+                <input type="file" id="document-upload" multiple hidden>
+                <button class="upload-btn" onclick="adicionarDocumento()">
+                    <i class="fas fa-upload"></i> Enviar Documento
+                </button>
+            </div>
+
+            <div class="actions-section">
+                <button class="action-btn" onclick="indexarDocumentos()">
+                    <i class="fas fa-sync-alt"></i> Reindexar Documentos
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Chat Container -->
+            <div class="chat-container">
+                <div class="chat-header">
+                    <h2><i class="fas fa-comments"></i> Chat com os documentos</h2>
+                </div>
+                <div class="chat-history" id="chat-history">
+                    <!-- Mensagens do chat aparecerão aqui -->
+                </div>
+                <div class="chat-input">
+                    <input type="text" id="question" placeholder="Digite sua pergunta sobre os documentos indexados...">
+                    <button class="send-btn" onclick="sendMessage()">
+                        <i class="fas fa-paper-plane"></i> Enviar
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Status Container -->
+            <div class="status-container">
+                <div class="status-header">
+                    <h3><i class="fas fa-chart-line"></i> Status do Sistema</h3>
+                    <span><i class="fas fa-circle text-success"></i> Online</span>
+                </div>
+                <div class="status-content" id="status">
+                    <!-- Status dinâmico do sistema -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Funções básicas para integração futura
+function sendMessage() {
+    const questionInput = document.getElementById('question');
+    const question = questionInput.value.trim();
+    if (!question) return;
+    
+    // Desativa o botão de enviar para prevenir múltiplas consultas
+    const sendButton = document.querySelector('.send-btn');
+    sendButton.disabled = true;
+    
+    addMessage(question, 'user');
+    questionInput.value = '';
+    
+    // Status de carregamento
+    const status = document.getElementById('status');
+    status.innerHTML = `<div class="status-item">
+        <div class="status-icon"><i class="fas fa-sync fa-spin"></i></div>
+        <div class="status-text"><h4>Processando pergunta...</h4></div>
+        <p class="processing-info">Por favor, aguarde. O processamento pode levar alguns minutos...</p>
+    </div>`;
+    
+    console.log("Enviando pergunta:", question);
+    
+    // Adiciona um contador de tempo para informar ao usuário
+    let startTime = Date.now();
+    let elapsedSeconds = 0;
+    let waitInterval = setInterval(() => {
+        elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+        document.querySelector('.processing-info').textContent = 
+            `Por favor, aguarde. O processamento pode levar alguns minutos... (${elapsedSeconds}s)`;
+    }, 1000);
+    
+    // Chama o backend com um timeout igual ao do backend (16 minutos)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1000 * 1000); // 1000 segundos (16 minutos e 40 segundos)
+    
+    fetch('/consulta', {
+        method: 'POST',
+        headers: { 
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache'
+        },
+        body: JSON.stringify({ pergunta: question }),
+        signal: controller.signal
+    })
+    .then(res => {
+        console.log("Resposta recebida", res);
+        clearInterval(waitInterval);
+        clearTimeout(timeoutId);
+        return res.json();
+    })
+    .then(resp => {
+        console.log("Dados da resposta:", resp);
+        
+        // Reativa o botão de enviar
+        document.querySelector('.send-btn').disabled = false;
+        
+        if (resp.resposta) {
+            addMessage(resp.resposta, 'bot');
+            // Se quiser mostrar fontes:
+            if (resp.fontes && resp.fontes.length > 0) {
+                addMessage('Fontes: ' + resp.fontes.join(', '), 'bot');
+            }
+            // Atualiza status
+            status.innerHTML = `<div class="status-item">
+                <div class="status-icon"><i class="fas fa-check"></i></div>
+                <div class="status-text">
+                    <h4>Resposta gerada com sucesso</h4>
+                    <p>Tempo total de processamento: ${Math.floor((Date.now() - startTime) / 1000)} segundos</p>
+                    ${resp.processing_time ? `<p class="processing-info">Tempo de processamento no servidor: ${resp.processing_time}</p>` : ''}
+                </div>
+            </div>`;
+        } else {
+            addMessage(resp.error || 'Erro ao obter resposta.', 'bot');
+            // Atualiza status de erro
+            status.innerHTML = `<div class="status-item">
+                <div class="status-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <div class="status-text"><h4>Erro ao processar pergunta</h4></div>
+                <div class="status-details">${JSON.stringify(resp)}</div>
+            </div>`;
+        }
+    })
+    .catch((err) => {
+        clearInterval(waitInterval);
+        clearTimeout(timeoutId);
+        console.error("Erro na requisição:", err);
+        
+        // Reativa o botão de enviar
+        document.querySelector('.send-btn').disabled = false;
+        
+        // Verificar se foi um erro de timeout/abort
+        let errorMessage = 'Erro ao conectar com o servidor. Tente novamente mais tarde.';
+        if (err.name === 'AbortError') {
+            errorMessage = 'A requisição demorou muito tempo e foi cancelada. O servidor pode estar processando uma tarefa complexa.';
+        }
+        
+        addMessage(errorMessage, 'bot');
+        
+        // Atualiza status de erro
+        status.innerHTML = `<div class="status-item">
+            <div class="status-icon"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="status-text">
+                <h4>Erro de conexão com o servidor</h4>
+                <p>${err.name === 'AbortError' ? 'O tempo limite da requisição foi excedido (16 minutos).' : 'Falha na comunicação com o servidor.'}</p>
+                <div class="retry-container" style="margin-top: 15px;">
+                    <button class="action-btn secondary" onclick="retryLastQuestion()">
+                        <i class="fas fa-redo-alt"></i> Tentar Novamente
+                    </button>
+                </div>
+            </div>
+        </div>`;
+        
+        // Salva a última pergunta para possibilitar retentativas
+        window.lastQuestion = question;
+    });
+}
+
+// Função para tentar novamente a última pergunta
+function retryLastQuestion() {
+    if (window.lastQuestion) {
+        const questionInput = document.getElementById('question');
+        questionInput.value = window.lastQuestion;
+        sendMessage();
+    }
+}
+
+        function addMessage(text, sender) {
+            const chatHistory = document.getElementById('chat-history');
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', sender);
+            const now = new Date();
+            const timeString = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+            messageDiv.innerHTML = `
+                <div class="avatar">
+                    <i class="fas ${sender === 'user' ? 'fa-user' : 'fa-robot'}"></i>
+                </div>
+                <div class="message-content">
+                    <div class="message-text">${text}</div>
+                    <div class="message-info">
+                        <span>${sender === 'user' ? 'Você' : 'Sistema RAG'}</span>
+                        <span>Hoje, ${timeString}</span>
+                    </div>
+                </div>
+            `;
+            chatHistory.appendChild(messageDiv);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        // Obsoleto: substituído pelo EventListener na parte inferior do código
+
+        function carregarDocumentos() {
+            fetch('/documentos')
+                .then(res => res.json())
+                .then(docs => {
+                    const docList = document.getElementById('document-list');
+                    docList.innerHTML = '';
+                    docs.forEach(doc => {
+                        const div = document.createElement('div');
+                        div.className = 'document-item';
+                        div.innerHTML = `
+                            <div class="document-info">
+                                <i class="fas fa-file-alt"></i>
+                                <span>${doc}</span>
+                            </div>
+                            <div class="document-actions">
+                                <button onclick="removerDocumento('${doc}')"><i class="fas fa-trash"></i></button>
+                            </div>
+                        `;
+                        docList.appendChild(div);
+                    });
+                });
+        }
+
+        function adicionarDocumento() {
+            document.getElementById('document-upload').click();
+        }
+
+        document.getElementById('document-upload').addEventListener('change', function() {
+            const files = Array.from(this.files);
+            if (!files.length) return;
+            let uploaded = 0;
+            const total = files.length;
+            const status = document.getElementById('status');
+            status.innerHTML = `<div class="status-item">
+        <div class="status-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+        <div class="status-text">
+            <h4>Enviando documentos...</h4>
+            <div id="upload-progress">0/${total}</div>
+        </div>
+    </div>`;
+            function uploadNext() {
+                if (files.length === 0) {
+                    carregarDocumentos();
+                    status.innerHTML = `<div class="status-item">
+                <div class="status-icon"><i class="fas fa-check"></i></div>
+                <div class="status-text"><h4>Upload concluído!</h4></div>
+            </div>`;
+                    return;
+                }
+                const file = files.shift();
+                const formData = new FormData();
+                formData.append('file', file);
+                fetch('/documentos', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(resp => {
+                    uploaded++;
+                    document.getElementById('upload-progress').innerText = `${uploaded}/${total}`;
+                    uploadNext();
+                });
+            }
+            uploadNext();
+        });
+
+        function removerDocumento(filename) {
+            if (!confirm('Remover este documento?')) return;
+            fetch(`/documentos/${filename}`, { method: 'DELETE' })
+                .then(res => res.json())
+                .then(resp => {
+                    // Mostra mensagem de sucesso
+                    const status = document.getElementById('status');
+                    status.innerHTML = `<div class="status-item">
+                        <div class="status-icon"><i class="fas fa-check"></i></div>
+                        <div class="status-text"><h4>${resp.message || 'Documento removido com sucesso!'}</h4></div>
+                    </div>`;
+                    carregarDocumentos();
+                })
+                .catch(err => {
+                    console.error('Erro ao remover documento:', err);
+                    const status = document.getElementById('status');
+                    status.innerHTML = `<div class="status-item">
+                        <div class="status-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div class="status-text"><h4>Erro ao remover documento</h4></div>
+                    </div>`;
+                });
+        }
+
+        function indexarDocumentos() {
+            // Mostra status de indexação iniciando
+            const status = document.getElementById('status');
+            status.innerHTML = `<div class="status-item">
+                <div class="status-icon"><i class="fas fa-sync fa-spin"></i></div>
+                <div class="status-text"><h4>Iniciando indexação...</h4></div>
+            </div>`;
+            
+            fetch('/api/index', { method: 'POST' })
+                .then(res => res.json())
+                .then(resp => {
+                    if (resp.status === "started") {
+                        acompanharProgressoIndexacao();
+                    } else {
+                        status.innerHTML = `<div class="status-item">
+                            <div class="status-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                            <div class="status-text"><h4>${resp.message || 'Erro ao iniciar indexação'}</h4></div>
+                        </div>`;
+                    }
+                })
+                .catch(err => {
+                    console.error('Erro ao iniciar indexação:', err);
+                    status.innerHTML = `<div class="status-item">
+                        <div class="status-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div class="status-text"><h4>Erro ao iniciar indexação</h4></div>
+                    </div>`;
+                });
+        }
+
+        function acompanharProgressoIndexacao() {
+            const status = document.getElementById('status');
+            let interval = setInterval(() => {
+                fetch('/api/status')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (!data.indexing) return;
+                        
+                        const indexStatus = data.indexing;
+                        let statusIcon = 'sync fa-spin';
+                        let statusText = 'Indexando...';
+                        
+                        if (indexStatus.status === 'completed') {
+                            statusIcon = 'check';
+                            statusText = 'Indexação concluída!';
+                            clearInterval(interval);
+                        } else if (indexStatus.status === 'error') {
+                            statusIcon = 'exclamation-triangle';
+                            statusText = 'Erro na indexação!';
+                            clearInterval(interval);
+                        }
+                        
+                        let progressText = '';
+                        if (indexStatus.total > 0) {
+                            progressText = `${indexStatus.progress || 0}/${indexStatus.total}`;
+                        }
+                        
+                        let html = `
+                            <div class="status-item">
+                                <div class="status-icon"><i class="fas fa-${statusIcon}"></i></div>
+                                <div class="status-text">
+                                    <h4>${statusText}</h4>
+                                    ${progressText ? `<div>${progressText}</div>` : ''}
+                                    <div>${indexStatus.message || ''}</div>
+                                </div>
+                            </div>`;
+                        
+                        status.innerHTML = html;
+                        
+                        if (indexStatus.status === 'completed' || indexStatus.status === 'error') {
+                            // Recarrega a lista de documentos após a indexação
+                            carregarDocumentos();
+                        }
+                    });
+            }, 1000);
+        }
+
+        function mostrarEstatisticas() {
+            fetch('/api/status')
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.db_stats) return;
+                    
+                    const stats = data.db_stats;
+                    const status = document.getElementById('status');
+                    let html = `<div class="status-item">
+                        <div class="status-icon"><i class="fas fa-chart-bar"></i></div>
+                        <div class="status-text">
+                            <h4>Estatísticas</h4>
+                            <ul>
+                                <li>Total de documentos: ${stats.total_documents || 0}</li>
+                                <li>Total de chunks: ${stats.count || 0}</li>
+                                <li>Total de embeddings: ${stats.count || 0}</li>
+                            </ul>
+                        </div>
+                    </div>`;
+                    status.innerHTML = html;
+                });
+        }
+        
+        // Carrega a lista de documentos ao iniciar
+        window.addEventListener('DOMContentLoaded', function() {
+            carregarDocumentos();
+            
+            // Configura o drag and drop
+            const dropArea = document.getElementById('drop-area');
+            
+            // Adiciona o evento de clique para a área de drop para permitir selecionar arquivo
+            dropArea.addEventListener('click', () => {
+                document.getElementById('document-upload').click();
+            });
+            
+            // Previne comportamento padrão do navegador
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+            });
+            
+            // Adiciona efeitos visuais durante o drag
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, () => {
+                    dropArea.classList.add('drag-active');
+                });
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, () => {
+                    dropArea.classList.remove('drag-active');
+                });
+            });
+            
+            // Processa os arquivos quando forem soltos
+            dropArea.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                
+                if (files.length > 0) {
+                    document.getElementById('document-upload').files = files;
+                    document.getElementById('document-upload').dispatchEvent(new Event('change'));
+                }
+            });
+        });
+    </script>
+</body>
+</html>

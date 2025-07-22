@@ -1,0 +1,182 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+Sistema RAG - Busca Inteligente em Documentos
+Interface Web com Flask
+"""
+
+import os
+import sys
+import yaml
+import logging
+from datetime import datetime
+from colorama import Fore, Style, init
+from pathlib import Path
+
+# Adiciona o diretório pai ao caminho do Python para permitir importações
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+# Importação dos componentes do sistema
+from processador_documentos import ProcessadorDocumentos
+from gerenciador_embeddings import GerenciadorEmbeddings
+from gerenciador.llm import OllamaLLMManager  # Corrigido o nome do módulo e classe
+from pipeline_rag import RAGPipeline  # Usando o nome correto da classe
+
+# Inicializa colorama para saída colorida
+init(autoreset=True)
+
+class SistemaRAG:
+    """Interface principal do sistema RAG"""
+    
+    def __init__(self):
+        """Inicializa o sistema RAG"""
+        # Carrega configurações
+        self.carregar_config()
+        
+        # Configura logging
+        self.configurar_logs()
+        
+        # Inicializa componentes
+        self.processador = ProcessadorDocumentos(self.config)
+        self.embeddings = GerenciadorEmbeddings(self.config)
+        self.llm = GerenciadorLLM(self.config)
+        self.pipeline = PipelineRAG(self.config, self.processador, self.embeddings, self.llm)
+        
+        self.logger.info("Sistema RAG inicializado com sucesso")
+    
+    def carregar_config(self):
+        """Carrega configurações do arquivo yaml"""
+        try:
+            with open("config/config.yaml", "r", encoding="utf-8") as f:
+                self.config = yaml.safe_load(f)
+        except Exception as e:
+            print(f"{Fore.RED}Erro ao carregar configurações: {e}")
+            sys.exit(1)
+    
+    def configurar_logs(self):
+        """Configura o sistema de logs"""
+        log_file = self.config["logs"]["arquivo"]
+        log_level = getattr(logging, self.config["logs"]["nivel"])
+        
+        # Garante que o diretório de logs existe
+        os.makedirs(os.path.dirname(log_file), exist_ok=True)
+        
+        # Configura o logger
+        logging.basicConfig(
+            level=log_level,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler(log_file, encoding="utf-8"),
+                logging.StreamHandler()
+            ]
+        )
+        
+        self.logger = logging.getLogger("SistemaRAG")
+    
+    def menu_principal(self):
+        """Exibe o menu principal do sistema"""
+        while True:
+            print(f"\n{Fore.CYAN}====== Sistema RAG - Busca Inteligente em Documentos ======")
+            print(f"{Fore.YELLOW}1. Indexar documentos")
+            print(f"{Fore.YELLOW}2. Fazer pergunta")
+            print(f"{Fore.YELLOW}3. Status do sistema")
+            print(f"{Fore.YELLOW}4. Sair")
+            
+            opcao = input(f"\n{Fore.GREEN}Escolha uma opção: ")
+            
+            if opcao == "1":
+                self.indexar_documentos()
+            elif opcao == "2":
+                self.fazer_pergunta()
+            elif opcao == "3":
+                self.mostrar_status()
+            elif opcao == "4":
+                print(f"{Fore.CYAN}Encerrando sistema. Até logo!")
+                sys.exit(0)
+            else:
+                print(f"{Fore.RED}Opção inválida. Tente novamente.")
+    
+    def indexar_documentos(self):
+        """Indexa documentos da pasta configurada"""
+        print(f"{Fore.CYAN}=== Indexação de Documentos ===")
+        
+        # Verifica se já existem documentos indexados
+        if self.pipeline.tem_documentos_indexados():
+            reindexar = input(f"{Fore.YELLOW}Já existem documentos indexados. Deseja reindexar tudo? (s/n): ")
+            if reindexar.lower() != "s":
+                print(f"{Fore.GREEN}Operação cancelada.")
+                return
+        
+        pasta_docs = self.config["documentos"]["pasta"]
+        print(f"{Fore.GREEN}Iniciando indexação dos documentos em: {pasta_docs}")
+        
+        try:
+            self.pipeline.indexar_documentos()
+            print(f"{Fore.GREEN}Indexação concluída com sucesso!")
+        except Exception as e:
+            self.logger.error(f"Erro durante indexação: {e}")
+            print(f"{Fore.RED}Erro durante indexação: {e}")
+    
+    def fazer_pergunta(self):
+        """Permite ao usuário fazer uma pergunta ao sistema"""
+        print(f"{Fore.CYAN}=== Consulta ao Sistema RAG ===")
+        
+        # Verifica se há documentos indexados
+        if not self.pipeline.tem_documentos_indexados():
+            print(f"{Fore.RED}Não há documentos indexados. Por favor, indexe documentos primeiro.")
+            return
+        
+        pergunta = input(f"{Fore.YELLOW}Digite sua pergunta: ")
+        if not pergunta.strip():
+            print(f"{Fore.RED}Pergunta vazia. Operação cancelada.")
+            return
+        
+        print(f"{Fore.GREEN}Processando consulta, aguarde...")
+        
+        try:
+            resposta = self.pipeline.consultar(pergunta)
+            print(f"\n{Fore.CYAN}=== Resposta ===")
+            print(f"{resposta}")
+            
+            # Log da consulta
+            self.logger.info(f"Consulta: '{pergunta}' processada com sucesso")
+        except Exception as e:
+            self.logger.error(f"Erro durante consulta: {e}")
+            print(f"{Fore.RED}Erro ao processar consulta: {e}")
+    
+    def mostrar_status(self):
+        """Exibe o status atual do sistema"""
+        print(f"{Fore.CYAN}=== Status do Sistema ===")
+        
+        try:
+            status = self.pipeline.obter_status()
+            
+            print(f"{Fore.GREEN}Documentos indexados: {status['num_documentos']}")
+            print(f"{Fore.GREEN}Chunks gerados: {status['num_chunks']}")
+            print(f"{Fore.GREEN}Embeddings calculados: {status['num_embeddings']}")
+            print(f"{Fore.GREEN}Banco vetorial: {status['vector_db_status']}")
+            print(f"{Fore.GREEN}Modelo LLM: {status['llm_status']}")
+            
+            # Formatos suportados
+            print(f"{Fore.GREEN}Formatos suportados: {', '.join(self.config['documentos']['formatos_suportados'])}")
+            
+            # Uso de cache
+            cache_status = "Ativo" if self.config["embeddings"]["cache_ativo"] else "Inativo"
+            print(f"{Fore.GREEN}Cache de embeddings: {cache_status}")
+            
+            print(f"\n{Fore.CYAN}Sistema funcionando normalmente")
+        except Exception as e:
+            self.logger.error(f"Erro ao obter status: {e}")
+            print(f"{Fore.RED}Erro ao obter status: {e}")
+
+if __name__ == "__main__":
+    try:
+        sistema = SistemaRAG()
+        sistema.menu_principal()
+    except KeyboardInterrupt:
+        print(f"\n{Fore.CYAN}Programa interrompido pelo usuário. Até logo!")
+    except Exception as e:
+        print(f"{Fore.RED}Erro fatal: {e}")
+        logging.error(f"Erro fatal: {e}", exc_info=True)
+        sys.exit(1)
