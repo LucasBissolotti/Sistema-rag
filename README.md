@@ -1,8 +1,8 @@
-# Sistema RAG - Busca Inteligente em Documentos
+# Sistema RAG 
 
 Um sistema completo de RAG (Retrieval-Augmented Generation) para busca inteligente em documentos locais usando embeddings e LLMs locais.
 
-## 📋 Visão Geral
+##  Visão Geral
 
 Este sistema permite indexar documentos locais (PDF, DOCX, TXT), gerar embeddings para busca semântica e utilizar modelos de linguagem (LLMs) para responder perguntas com base no conteúdo dos documentos. Tudo funcionando de forma local e privada.
 
@@ -17,7 +17,7 @@ Este sistema permite indexar documentos locais (PDF, DOCX, TXT), gerar embedding
 - ✅ Sistema de log completo
 - ✅ Cache de embeddings para melhor performance
 
-## 🚀 Instalação
+##  Instalação
 
 ### Pré-requisitos
 - Python 3.8 ou superior
@@ -84,7 +84,7 @@ Coloque seus documentos na pasta `data/documents`. O sistema suporta:
 - Documentos Word (`.docx`)
 - Arquivos de texto (`.txt`)
 
-## 💻 Como Usar
+##  Como Usar
 
 ### Interface de Linha de Comando (CLI)
 
@@ -96,19 +96,19 @@ python src/main.py
 
 Você verá um menu com as seguintes opções:
 
-1. **📚 Indexar documentos**  
+1. ** Indexar documentos**  
    - Processa e indexa todos os documentos na pasta configurada
    - Gera embeddings e armazena no banco de dados vetorial
    - Permite reindexar todos os documentos
 
-2. **❓ Fazer pergunta**  
+2. ** Fazer pergunta**  
    - Faça perguntas em linguagem natural sobre o conteúdo dos documentos
    - O sistema busca as informações relevantes e gera respostas baseadas nos documentos
 
-3. **📊 Status do sistema**  
+3. ** Status do sistema**  
    - Visualize estatísticas sobre documentos indexados e status dos componentes
 
-4. **🚪 Sair**  
+4. ** Sair**  
    - Encerra o sistema
 
 ### Interface Web
@@ -121,7 +121,7 @@ python src/web/app.py
 
 Acesse no navegador: http://localhost:5000
 
-## 🧩 Arquitetura do Sistema
+##  Arquitetura do Sistema
 
 O sistema é composto pelos seguintes componentes:
 
@@ -158,7 +158,7 @@ src/                 # Código-fonte
       └── templates/             # Templates HTML
 ```
 
-## 📝 Desenvolvendo o Sistema
+##  Desenvolvendo o Sistema
 
 ### Adicionando Novos Formatos de Documento
 
@@ -183,7 +183,7 @@ Você pode mudar o modelo usado alterando o parâmetro `model_name` no arquivo `
 
 Para integrar outros modelos LLM, edite o arquivo `gerenciador_llm.py` ou `llm_manager.py`.
 
-## 📄 Licença
+##  Licença
 
 Este projeto é licenciado sob a licença MIT - consulte o arquivo [LICENSE](LICENSE) para obter detalhes.
 
